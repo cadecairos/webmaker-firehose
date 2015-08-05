@@ -27,9 +27,9 @@ gulp.task('less', function() {
  */
 gulp.task('bundle-firehose', function() {
   var browserify = require('browserify');
-  var transform = require('vinyl-transform');
+  var buffer = require('vinyl-buffer');
   var reactify = require('reactify');
-  var to5ify = require("6to5ify");
+  var babel = require("gulp-babel");
   var source = require('vinyl-source-stream');
 
   // Don't process react. We'll link to its CDN minified version.
@@ -40,12 +40,14 @@ gulp.task('bundle-firehose', function() {
     'react': 'React'
   });
 
-  return browserify(cwd + '/components/firehose-app.jsx')
-    .transform(to5ify)
-    .transform(reactify)
-    .transform(donottouch)
-    .bundle()
-    .pipe(source('firehose-app.js'))
+  var b = browserify({
+      transform: [babel, reactify, donottouch],
+      debug: true
+    });
+
+  return b.bundle()
+    .pipe(source(cwd + '/components/firehose-app.jsx'))
+    .pipe(buffer())
     .pipe(gulp.dest(cwd + '/build/'));
 });
 
@@ -54,9 +56,12 @@ gulp.task('bundle-firehose', function() {
  */
 gulp.task('minify-firehose', ['bundle-firehose'], function() {
   var uglify = require('gulp-uglify');
+  var sourcemaps = require('gulp-sourcemaps');
 
   return gulp.src(cwd + '/build/firehose-app.js')
-    .pipe(uglify())
+    .pipe(sourcemaps.init({loadMaps: true}))
+      .pipe(uglify())
+    .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest(cwd + '/public/javascript'));
 });
 

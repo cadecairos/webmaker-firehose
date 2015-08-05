@@ -37,9 +37,7 @@ var webmakerAuth = new WebmakerAuth({
 
 // some housekeeping:
 app.disable("x-powered-by");
-app.use(helmet.iexss());
-app.use(helmet.contentTypeOptions());
-app.use(helmet.xframe());
+app.use(helmet());
 
 if (env.get("FORCE_SSL")) {
   app.use(helmet.hsts());
