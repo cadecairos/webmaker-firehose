@@ -8,7 +8,6 @@
     "require": false
   },
   "esnext": true,
-  "camelcase": true,
   "bitwise": true,
   "browser": true,
   "curly": true,

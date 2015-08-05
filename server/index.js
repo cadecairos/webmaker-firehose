@@ -5,7 +5,6 @@ var express = require("express"),
     bodyParser = require("body-parser"),
     compression = require("compression"),
     csrf = require("csurf"),
-    WebmakerAuth = require("webmaker-auth"),
     Habitat = require("habitat"),
     helmet = require("helmet"),
     routes = require("./routes"),
@@ -20,23 +19,12 @@ var nunjucksEnv = new nunjucks.Environment(
 nunjucksEnv.express( app );
 
 Habitat.load();
-Habitat.load("server/config/defaults.env");
-Habitat.load("server/config/staging.env");
 Habitat.load("server/config/production.env");
+Habitat.load("server/config/staging.env");
+Habitat.load("server/config/defaults.env");
 
 var env = new Habitat();
 
-var webmakerAuth = new WebmakerAuth({
-  loginURL: env.get("LOGIN_URL"),
-  authLoginURL: env.get("AUTH_LOGIN_URL"),
-  loginHost: env.get("LOGIN_HOST_ADDRESS"),
-  secretKey: env.get("SECRET_KEY"),
-  forceSSL: env.get("FORCE_SSL"),
-  domain: env.get("DOMAIN")
-});
-
-// some housekeeping:
-app.disable("x-powered-by");
 app.use(helmet());
 
 if (env.get("FORCE_SSL")) {
@@ -48,11 +36,11 @@ app.use(compression());
 app.use(bodyParser.json());
 app.use(cookieSession({
   name: "Firehose:Login",
-  secret: env.get("SECRET_KEY"),
+  secret: env.get("SESSION_SECRET"),
   expires: false,
   secure: env.get("FORCE_SSL"),
   secureProxy: env.get("FORCE_SSL"),
-  domain: env.get("DOMAIN")
+  domain: env.get("COOKIE_DOMAIN")
 }));
 app.use(csrf());
 
@@ -62,7 +50,7 @@ app.use("/cdn", express.static(__dirname + "/../firehose/vendor"));
 app.use("/cdn", express.static(__dirname + "/../node_modules"));
 
 // bind API routes
-routes.setup(app, env, webmakerAuth);
+routes.setup(app, env);
 
 app.use("/", express.static(__dirname + "/../firehose/public"));
 

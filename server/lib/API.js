@@ -1,80 +1,49 @@
-var makeAPIClient = require("makeapi-client");
-var hyperquest = require("hyperquest");
-var featuredTag = "webmaker:featured";
+var request = require('request');
 
-module.exports = function(env) {
-  var client = new makeAPIClient({
-    apiURL: env.get("MAKEAPI_URL"),
-    hawk: {
-      key: env.get("MAKE_PRIVATEKEY"),
-      id: env.get("MAKE_PUBLICKEY"),
-      algorithm: "sha256"
-    }
-  });
+module.exports = function(apiSettings) {
   return {
     find: function(req, res) {
       var page = req.query.p;
-
-      client.find({
-        limit: 100,
-        page: page,
-        sortByField: "createdAt"
-      }).then(function(err, makes) {
-        if ( err ) {
-          console.error( err );
+      
+      request.get({
+        url: apiSettings.URI + '/projects?count=100&page=' + page
+      }, function(err, response, body) {
+        if (err) {
           return res.status(500).send(err);
         }
-        return res.json(makes);
+
+        res.json(body);
       });
     },
 
     feature: function(req, res) {
-      var action = req.body.featured ? "untag" : "tag";
-      client[ action ](
-        req.body.id,
-        featuredTag,
-        function(err, data) {
-          if ( err ) {
-            return res.status(500).send(err);
-          }
-          res.json(data);
+      request.patch({
+        url: apiSettings.URI + '/users/' + req.body.user + '/projects/' + req.body.project + '/feature',
+        headers: {
+          'Authorization': 'token ' + req.session.token
         }
-      );
+      }, function(err, response, body) {
+        if (err) {
+          return res.status(500).send(err);
+        }
+
+        res.json(body);
+      });
     },
 
     trash: function(req, res) {
-      var id = req.body.id;
-      client.remove(id, function(err) {
-        if ( err ) {
+      request.del({
+        url: apiSettings.URI + '/users/' + req.body.user + '/projects/' + 'req.body.project',
+        headers: {
+          'Authorization': 'token ' + req.session.token
+        }
+      }, function(err, response, body) {
+        if (err) {
           return res.status(500).send(err);
         }
-        res.json({status: "deleted"});
-      });
-    },
 
-    restore: function(req, res) {
-      var id = req.body.id;
-      client.restore(id, function(err, data) {
-        if ( err ) {
-          return res.status(500).send(err);
-        }
-        res.json(data);
+        res.json(body);
       });
-    },
-
-    proxyMake: function(req, res) {
-      var url = req.query.url;
-
-      res.header("x-frame-options", "SAMEORIGIN");
-      res.header("Content-Type", "text/html");
-
-      var hReq = hyperquest.get({
-        uri: url
-      });
-      hReq.on("error", function(err) {
-        res.status(500).send(err);
-      });
-      hReq.pipe(res);
     }
   };
 };
